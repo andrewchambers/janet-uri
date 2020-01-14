@@ -49,8 +49,8 @@ static Janet jescape(int argc, Janet *argv) {
 
   if (len >= NALLOCA)
     janet_sfree(tmp);
-
   return escaped;
+#undef NALLOCA
 }
 
 static Janet _junescape(const uint8_t *str, size_t len) {
@@ -97,6 +97,7 @@ static Janet _junescape(const uint8_t *str, size_t len) {
     janet_sfree(tmp);
 
   return unescaped;
+#undef NALLOCA
 }
 
 static Janet junescape(int argc, Janet *argv) {
