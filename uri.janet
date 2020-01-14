@@ -128,7 +128,7 @@
 
    :scheme :host :port :userinfo :path :query :fragment
 
-   The returned elements are not decoded, normalized or decoded.
+   The returned elements are not normalized or decoded.
   "
   [u]
   (when-let [matches (peg/match (comptime (peg/compile grammar)) u)]
