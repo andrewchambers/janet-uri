@@ -81,34 +81,42 @@
 #    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
 #                  / "*" / "+" / "," / ";" / "="
 
-(def uri-peg ~{
-    :URI (sequence :scheme ":" :heir-part (opt (sequence "?" :query)) (opt (sequence "#" :fragment)))
-    :hier-part (choice (sequence "//" :authority :path-abempty) :path-absolute :abs-rootless :path-empty)
-    :absolute-URI  (sequence :scheme ":" :hier-part (opt (sequence  "?" :query ))
-    :relative-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-noscheme :path-empty)
-    :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
-    :authority (sequence (opt (sequence :userinfo "@")) :host (opt (sequence ":" :port)))
-    :userinfo (any (choice :unreserved :pct-encoded :sub-delims ":"))
-    :host (choice reg-name) # TODO ip literals
-    :port (any :d)
-    # XXX todo ip literals...
-    :reg-name (any (sequence :unreserved :pct-encoded :sub-delims ))
-    :path (choice :path-abempty :path-absolute :path-noscheme :path-rootless :path-empty)
-    :path-abempty (any (sequence "/" :segment))
-    :path-absolute (sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment)))))
-    :path-noscheme (sequence :segment-nz-nc (any (sequence "/" :segment)))
-    :path-rootless (sequence :segment-nz (any (sequence "/" :segment)))
-    :path-empty (not :pchar)
-    :segment (any :pchar)
-    :segment-nz (some :pchar)
-    :segment-nz-nc (some (choice :unreserved :pct-encoded :sub-delims "@" ))
-    :pchar (choice :unreserved :pct-encoded :sub-delims ":" "@")
-    :query (any (choice :pchar "/" "?"))
-    :fragment (any (choice :pchar "/" "?"))
-    :pct-encoded (sequence "%" :hexdig :hexdig)
-    :unreserved (choice :a :d  "-" "." "_" "~")
-    :reserved (choice :gen-delims :sub-delims)
-    :gen-delims (choice ":" "/" "?" "#" "[" "]" "@")
-    :sub-delims (choice "!" "$" "&" "'" "(" ")" "*" "+" "," ";" "=")
-    :hexdig (choice :d (range "AF"))
-  })
+(def uri-grammar ~{
+  :main (sequence :URI (not 1))
+  :URI (sequence (capture :scheme) ":" (capture :hier-part) (opt (sequence "?" (capture :query)))  (opt (sequence "#" (capture :fragment))))
+  :hier-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-rootless :path-empty)
+  :relative-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-noscheme :path-empty)
+  :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
+  :authority (sequence (opt (sequence :userinfo "@")) :host (opt (sequence ":" :port)))
+  :userinfo (any (choice :unreserved :pct-encoded :sub-delims ":"))
+  :host (choice :IPv4address :reg-name) # TODO ip literals
+  :port (any :d)
+  # XXX todo ip6 literals...
+  :IPv4address (sequence :dec-octet "." :dec-octet "." :dec-octet "." :dec-octet)
+  :dec-octet (choice (sequence "25" (range "05")) (sequence "2" (range "04") :d) (sequence "1" :d :d) (sequence (range "19") :d) :d)
+  :reg-name (any (sequence :unreserved :pct-encoded :sub-delims ))
+  :path (choice :path-abempty :path-absolute :path-noscheme :path-rootless :path-empty)
+  :path-abempty (any (sequence "/" :segment))
+  :path-absolute (sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment)))))
+  :path-noscheme (sequence :segment-nz-nc (any (sequence "/" :segment)))
+  :path-rootless (sequence :segment-nz (any (sequence "/" :segment)))
+  :path-empty (not :pchar)
+  :segment (any :pchar)
+  :segment-nz (some :pchar)
+  :segment-nz-nc (some (choice :unreserved :pct-encoded :sub-delims "@" ))
+  :pchar (choice :unreserved :pct-encoded :sub-delims ":" "@")
+  :query (any (choice :pchar "/" "?"))
+  :fragment (any (choice :pchar "/" "?"))
+  :pct-encoded (sequence "%" :hexdig :hexdig)
+  :unreserved (choice :a :d  "-" "." "_" "~")
+  :reserved (choice :gen-delims :sub-delims)
+  :gen-delims (choice ":" "/" "?" "#" "[" "]" "@")
+  :sub-delims (choice "!" "$" "&" "'" "(" ")" "*" "+" "," ";" "=")
+  :hexdig (choice :d (range "AF") (range "af"))
+})
+
+(defn parse
+  [u]
+  (peg/match (comptime (peg/compile uri-grammar)) u))
+
+(parse "https://google.com/foobar")
