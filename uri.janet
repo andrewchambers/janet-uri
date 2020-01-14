@@ -81,16 +81,16 @@
 #    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
 #                  / "*" / "+" / "," / ";" / "="
 
-(defn named-capture
+(defn- named-capture
   [rule &opt name]
   (default name rule)
   ~(sequence (constant ,name) (capture ,rule)))
 
-(def base-grammar ~{
+(def- grammar ~{
   :main (sequence :URI-reference (not 1))
   :URI-reference (choice :URI :relative-ref)
   :URI (sequence ,(named-capture :scheme) ":" :hier-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
-  :relative-ref (sequence relative-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
+  :relative-ref (sequence :relative-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
   :hier-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-rootless :path-empty)
   :relative-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-noscheme :path-empty)
   :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
@@ -123,8 +123,7 @@
 })
 
 (defn parse
-  "
-   Parse a uri-reference following rfc3986.
+  "Parse a uri-reference following rfc3986.
    Possible returned table elements include:
 
    :scheme :host :port :userinfo :path :query :fragment
@@ -132,5 +131,5 @@
    The returned elements are not decoded, normalized or decoded.
   "
   [u]
-  (when-let [matches (peg/match (comptime (peg/compile uri-grammar)) u)]
+  (when-let [matches (peg/match (comptime (peg/compile grammar)) u)]
     (table ;matches)))
