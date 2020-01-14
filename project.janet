@@ -8,3 +8,7 @@
 (declare-source
   :name "uri"
   :source ["uri.janet"])
+
+(declare-native
+  :name "_uri"
+  :source ["uri.c"])

@@ -80,13 +80,14 @@
 #    gen-delims    = ":" / "/" / "?" / "#" / "[" / "]" / "@"
 #    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
 #                  / "*" / "+" / "," / ";" / "="
+(import _uri :prefix "" :export true)
 
 (defn- named-capture
   [rule &opt name]
   (default name rule)
   ~(sequence (constant ,name) (capture ,rule)))
 
-(def- grammar ~{
+(def- uri-grammar ~{
   :main (sequence :URI-reference (not 1))
   :URI-reference (choice :URI :relative-ref)
   :URI (sequence ,(named-capture :scheme) ":" :hier-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
@@ -112,13 +113,13 @@
   :segment-nz (some :pchar)
   :segment-nz-nc (some (choice :unreserved :pct-encoded :sub-delims "@" ))
   :pchar (choice :unreserved :pct-encoded :sub-delims ":" "@")
-  :query (any (choice :pchar "/" "?"))
-  :fragment (any (choice :pchar "/" "?"))
+  :query (any (choice :pchar (set "/?")))
+  :fragment (any (choice :pchar (set "/?")))
   :pct-encoded (sequence "%" :hexdig :hexdig)
-  :unreserved (choice :a :d  "-" "." "_" "~")
+  :unreserved (choice :a :d  (set "-._~"))
   :reserved (choice :gen-delims :sub-delims)
-  :gen-delims (choice ":" "/" "?" "#" "[" "]" "@")
-  :sub-delims (choice "!" "$" "&" "'" "(" ")" "*" "+" "," ";" "=")
+  :gen-delims (set ":/?#[]@")
+  :sub-delims (set "!$&'()*+,;=")
   :hexdig (choice :d (range "AF") (range "af"))
 })
 
@@ -134,5 +135,19 @@
    returns nil if the input is not a valid uri.
   "
   [u]
-  (when-let [matches (peg/match (comptime (peg/compile grammar)) u)]
+  (when-let [matches (peg/match (comptime (peg/compile uri-grammar)) u)]
+    (table ;matches)))
+
+(def- query-grammar ~{
+  :main (sequence (opt :query) (not 1))
+  :query (sequence :pair (any (sequence "&" :pair)))
+  :pair (sequence (cmt (capture :key) ,unescape) "=" (cmt (capture :value) ,unescape))
+  :key (any (sequence (not "=") 1))
+  :value (any (sequence (not "&") 1))
+})
+
+(defn parse-query
+  [q]
+  "Parse a uri encoded query string returning a table or nil."
+  (when-let [matches (peg/match (comptime (peg/compile query-grammar)) q)]
     (table ;matches)))

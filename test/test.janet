@@ -1,6 +1,6 @@
 (import ../uri :as uri)
 
-(def tests [
+(def parse-tests [
 
   ["foo://127.0.0.1"
   @{:scheme "foo" :host "127.0.0.1" :path ""}]
@@ -21,8 +21,28 @@
   @{}]
 ])
 
-(each tc tests
+(each tc parse-tests
   (def r (uri/parse (tc 0)))
+  (unless (deep= r (tc 1))
+    (eprintf "%p\n!=\n%p" r (tc 1))
+    (error "fail")))
+
+(loop [i :range [0 1000]]
+  (def s (string (os/cryptorand 10)))
+  (unless (= s (uri/unescape (uri/escape s)))
+    (pp  s)
+    (pp  (uri/escape s))
+    (pp  (uri/unescape (uri/escape s)))
+    (error "fail.")))
+
+(def parse-query-tests [
+    ["" @{}]
+    ["abc=5&%20=" @{"abc" "5" " " ""}]
+    ["a=b" @{"a" "b"}]
+])
+
+(each tc parse-query-tests
+  (def r (uri/parse-query (tc 0)))
   (unless (deep= r (tc 1))
     (eprintf "%p\n!=\n%p" r (tc 1))
     (error "fail")))
