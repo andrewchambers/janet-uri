@@ -82,6 +82,20 @@
 #                  / "*" / "+" / "," / ";" / "="
 (import _uri :prefix "" :export true)
 
+(def- query-grammar ~{
+  :main (sequence (opt :query) (not 1))
+  :query (sequence :pair (any (sequence "&" :pair)))
+  :pair (sequence (cmt (capture :key) ,unescape) "=" (cmt (capture :value) ,unescape))
+  :key (any (sequence (not "=") 1))
+  :value (any (sequence (not "&") 1))
+})
+
+(defn parse-query
+  [q]
+  "Parse a uri encoded query string returning a table or nil."
+  (when-let [matches (peg/match (comptime (peg/compile query-grammar)) q)]
+    (table ;matches)))
+
 (defn- named-capture
   [rule &opt name]
   (default name rule)
@@ -90,8 +104,8 @@
 (def- uri-grammar ~{
   :main (sequence :URI-reference (not 1))
   :URI-reference (choice :URI :relative-ref)
-  :URI (sequence ,(named-capture :scheme) ":" :hier-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
-  :relative-ref (sequence :relative-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
+  :URI (sequence ,(named-capture :scheme) ":" :hier-part (opt (sequence "?" ,(named-capture :query :raw-query)))  (opt (sequence "#" ,(named-capture :fragment :raw-fragment))))
+  :relative-ref (sequence :relative-part (opt (sequence "?" ,(named-capture :query :raw-query)))  (opt (sequence "#" ,(named-capture :fragment :raw-fragment))))
   :hier-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-rootless :path-empty)
   :relative-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-noscheme :path-empty)
   :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
@@ -104,10 +118,10 @@
   :dec-octet (choice (sequence "25" (range "05")) (sequence "2" (range "04") :d) (sequence "1" :d :d) (sequence (range "19") :d) :d)
   :reg-name (any (choice :unreserved :pct-encoded :sub-delims))
   :path (choice :path-abempty :path-absolute :path-noscheme :path-rootless :path-empty)
-  :path-abempty  ,(named-capture ~(any (sequence "/" :segment)) :path)
-  :path-absolute ,(named-capture ~(sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment))))) :path)
-  :path-noscheme ,(named-capture ~(sequence :segment-nz-nc (any (sequence "/" :segment))) :path)
-  :path-rootless ,(named-capture ~(sequence :segment-nz (any (sequence "/" :segment))) :path)
+  :path-abempty  ,(named-capture ~(any (sequence "/" :segment)) :raw-path)
+  :path-absolute ,(named-capture ~(sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment))))) :raw-path)
+  :path-noscheme ,(named-capture ~(sequence :segment-nz-nc (any (sequence "/" :segment))) :raw-path)
+  :path-rootless ,(named-capture ~(sequence :segment-nz (any (sequence "/" :segment))) :raw-path)
   :path-empty (not :pchar)
   :segment (any :pchar)
   :segment-nz (some :pchar)
@@ -123,31 +137,43 @@
   :hexdig (choice :d (range "AF") (range "af"))
 })
 
-(defn parse
+
+(defn parse-raw
   "Parse a uri-reference following rfc3986.
-   
+
    Returns a table with elements that may include:
 
-   :scheme :host :port :userinfo :path :query :fragment
+   :scheme :host :port :userinfo
+   :raw-path :raw-query :raw-fragment
 
    The returned elements are not normalized or decoded.
    The returned elements are always strings.
    returns nil if the input is not a valid uri.
   "
-  [u]
+  [u &keys {:parse-query parse-query :unescape do-unescape}]
   (when-let [matches (peg/match (comptime (peg/compile uri-grammar)) u)]
     (table ;matches)))
 
-(def- query-grammar ~{
-  :main (sequence (opt :query) (not 1))
-  :query (sequence :pair (any (sequence "&" :pair)))
-  :pair (sequence (cmt (capture :key) ,unescape) "=" (cmt (capture :value) ,unescape))
-  :key (any (sequence (not "=") 1))
-  :value (any (sequence (not "&") 1))
-})
+(defn parse
+  "Parse a uri-reference following rfc3986.
 
-(defn parse-query
-  [q]
-  "Parse a uri encoded query string returning a table or nil."
-  (when-let [matches (peg/match (comptime (peg/compile query-grammar)) q)]
-    (table ;matches)))
+   Returns a table with elements that may include:
+
+   :scheme :host :port :userinfo :raw-path :path
+   :raw-query :query :raw-fragment :fragment
+
+   The path, and fragment are uri unescaped.
+   The query is parsed into a table.
+   The rest of the returned values are strings.
+   returns nil if the input is not a valid uri.
+  "
+  [u]
+  (when-let [u (parse-raw u)]
+    (when-let [p (u :raw-path)]
+      (put u :path (unescape p)))
+    (when-let [f (u :raw-fragment)]
+      (put u :fragment (unescape f)))
+    (when-let [q (u :raw-query)]
+      (put u :query (parse-query q)))
+    u))
+
