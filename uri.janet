@@ -81,25 +81,32 @@
 #    sub-delims    = "!" / "$" / "&" / "'" / "(" / ")"
 #                  / "*" / "+" / "," / ";" / "="
 
-(def uri-grammar ~{
-  :main (sequence :URI (not 1))
-  :URI (sequence (capture :scheme) ":" (capture :hier-part) (opt (sequence "?" (capture :query)))  (opt (sequence "#" (capture :fragment))))
+(defn named-capture
+  [rule &opt name]
+  (default name rule)
+  ~(sequence (constant ,name) (capture ,rule)))
+
+(def base-grammar ~{
+  :main (sequence :URI-reference (not 1))
+  :URI-reference (choice :URI :relative-ref)
+  :URI (sequence ,(named-capture :scheme) ":" :hier-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
+  :relative-ref (sequence relative-part (opt (sequence "?" ,(named-capture :query)))  (opt (sequence "#" ,(named-capture :fragment))))
   :hier-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-rootless :path-empty)
   :relative-part (choice (sequence "//" :authority :path-abempty) :path-absolute :path-noscheme :path-empty)
   :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
-  :authority (sequence (opt (sequence :userinfo "@")) :host (opt (sequence ":" :port)))
+  :authority (sequence (opt (sequence ,(named-capture :userinfo) "@")) ,(named-capture :host) (opt (sequence ":" ,(named-capture :port))))
   :userinfo (any (choice :unreserved :pct-encoded :sub-delims ":"))
   :host (choice :IPv4address :reg-name) # TODO ip literals
   :port (any :d)
   # XXX todo ip6 literals...
   :IPv4address (sequence :dec-octet "." :dec-octet "." :dec-octet "." :dec-octet)
   :dec-octet (choice (sequence "25" (range "05")) (sequence "2" (range "04") :d) (sequence "1" :d :d) (sequence (range "19") :d) :d)
-  :reg-name (any (sequence :unreserved :pct-encoded :sub-delims ))
+  :reg-name (any (choice :unreserved :pct-encoded :sub-delims))
   :path (choice :path-abempty :path-absolute :path-noscheme :path-rootless :path-empty)
-  :path-abempty (any (sequence "/" :segment))
-  :path-absolute (sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment)))))
-  :path-noscheme (sequence :segment-nz-nc (any (sequence "/" :segment)))
-  :path-rootless (sequence :segment-nz (any (sequence "/" :segment)))
+  :path-abempty  ,(named-capture ~(any (sequence "/" :segment)) :path)
+  :path-absolute ,(named-capture ~(sequence "/" (opt (sequence :segment-nz (any (sequence "/" :segment))))) :path)
+  :path-noscheme ,(named-capture ~(sequence :segment-nz-nc (any (sequence "/" :segment))) :path)
+  :path-rootless ,(named-capture ~(sequence :segment-nz (any (sequence "/" :segment))) :path)
   :path-empty (not :pchar)
   :segment (any :pchar)
   :segment-nz (some :pchar)
@@ -116,7 +123,14 @@
 })
 
 (defn parse
-  [u]
-  (peg/match (comptime (peg/compile uri-grammar)) u))
+  "
+   Parse a uri-reference following rfc3986.
+   Possible returned table elements include:
 
-(parse "https://google.com/foobar")
+   :scheme :host :port :userinfo :path :query :fragment
+
+   The returned elements are not decoded, normalized or decoded.
+  "
+  [u]
+  (when-let [matches (peg/match (comptime (peg/compile uri-grammar)) u)]
+    (table ;matches)))
