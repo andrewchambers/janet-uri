@@ -6,8 +6,16 @@ A uri parser following https://tools.ietf.org/html/rfc3986 implemented in janet.
 # Quick examples
 
 ```
-(uri/parse "https://ac@google.com:123/foo?a=b#123")
-@{:userinfo "ac" :path "/foo" :host "google.com" :fragment "123" :scheme "https" :port "123" :query "a=b"}
+(uri/parse "https://ac@google.com:123/foo%20bar?a=b#123")
+@{:host "google.com" :port "123"
+  :userinfo "ac"
+  :raw-fragment "123"
+  :fragment "123"
+  :raw-query "a=b"
+  :query @{"a" "b"}
+  :path "/foo bar"
+  :raw-path "/foo%20bar"
+  :scheme "https"}
 
 (uri/escape )
 "abc%20"
