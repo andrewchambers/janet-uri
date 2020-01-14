@@ -124,11 +124,14 @@
 
 (defn parse
   "Parse a uri-reference following rfc3986.
-   Possible returned table elements include:
+   
+   Returns a table with elements that may include:
 
    :scheme :host :port :userinfo :path :query :fragment
 
    The returned elements are not normalized or decoded.
+   The returned elements are always strings.
+   returns nil if the input is not a valid uri.
   "
   [u]
   (when-let [matches (peg/match (comptime (peg/compile grammar)) u)]
