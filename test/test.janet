@@ -31,13 +31,12 @@
     (eprintf "%p\n!=\n%p" r (tc 1))
     (error "fail")))
 
-(loop [i :range [0 1000]]
-  (def s (string (os/cryptorand 10)))
-  (unless (= s (uri/unescape (uri/escape s)))
-    (pp  s)
-    (pp  (uri/escape s))
-    (pp  (uri/unescape (uri/escape s)))
-    (error "fail.")))
+(let [rng (math/rng (os/time))]
+  (loop [i :range [0 100]]
+    (def n (math/rng-int rng 2000))
+    (def s (string (os/cryptorand n)))
+    (unless (= s (uri/unescape (uri/escape s)))
+      (error "fail."))))
 
 (def parse-query-tests [
     ["" @{}]
