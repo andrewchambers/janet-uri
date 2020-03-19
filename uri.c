@@ -1,4 +1,6 @@
+#if !defined(__FreeBSD__)
 #include <alloca.h>
+#endif
 #include <janet.h>
 #include <stdio.h>
 #include <stdlib.h>
