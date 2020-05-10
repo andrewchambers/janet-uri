@@ -101,10 +101,6 @@
   (default name rule)
   ~(sequence (constant ,name) (capture ,rule)))
 
-(defn- exactly # XXX Remove if https://github.com/janet-lang/janet/issues/252 is accepted.
-  [count rule]
-  ~(between ,count ,count ,rule))
-
 (def- uri-grammar ~{
   :main (sequence :URI-reference (not 1))
   :URI-reference (choice :URI :relative-ref)
@@ -121,11 +117,11 @@
   :IPv4address (sequence :dec-octet "." :dec-octet "." :dec-octet "." :dec-octet)
   :IPvFuture (sequence "v" (at-least 1 :hexdig) "." (at-least 1 (sequence :unreserved :sub-delims ":" )))
   :IPv6address (choice
-    (sequence ,(exactly 6 ~(sequence :h16 ":")) :ls32)
-    (sequence "::" ,(exactly 5 ~(sequence :h16 ":")) :ls32)
-    (sequence (opt :h16) "::" ,(exactly 4 ~(sequence :h16 ":")) :ls32)
-    (sequence (opt (sequence (at-most 1 (sequence :h16 ":")) :h16)) "::" ,(exactly 3 ~(sequence :h16 ":")) :ls32)
-    (sequence (opt (sequence (at-most 2 (sequence :h16 ":")) :h16)) "::" ,(exactly 2 ~(sequence :h16 ":")) :ls32)
+    (sequence (repeat 6 (sequence :h16 ":")) :ls32)
+    (sequence "::" (repeat 5 (sequence :h16 ":")) :ls32)
+    (sequence (opt :h16) "::" (repeat 4 (sequence :h16 ":")) :ls32)
+    (sequence (opt (sequence (at-most 1 (sequence :h16 ":")) :h16)) "::" (repeat 3 (sequence :h16 ":")) :ls32)
+    (sequence (opt (sequence (at-most 2 (sequence :h16 ":")) :h16)) "::" (repeat 2 (sequence :h16 ":")) :ls32)
     (sequence (opt (sequence (at-most 3 (sequence :h16 ":")) :h16)) "::" (sequence :h16 ":") :ls32)
     (sequence (opt (sequence (at-most 4 (sequence :h16 ":")) :h16)) "::" :ls32)
     (sequence (opt (sequence (at-most 5 (sequence :h16 ":")) :h16)) "::" :h16)
