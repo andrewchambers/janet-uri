@@ -17,7 +17,7 @@ A uri parser following https://tools.ietf.org/html/rfc3986 implemented in janet.
   :raw-path "/foo%20bar"
   :scheme "https"}
 
-(uri/escape )
+(uri/escape "abc ")
 "abc%20"
 
 (uri/unescape "abc%20")

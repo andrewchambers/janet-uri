@@ -144,7 +144,6 @@
   :fragment (any (choice :pchar (set "/?")))
   :pct-encoded (sequence "%" :hexdig :hexdig)
   :unreserved (choice :a :d  (set "-._~"))
-  :reserved (choice :gen-delims :sub-delims)
   :gen-delims (set ":/?#[]@")
   :sub-delims (set "!$&'()*+,;=")
   :hexdig (choice :d (range "AF") (range "af"))
