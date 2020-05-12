@@ -6,7 +6,6 @@
   :repo "git+https://github.com/andrewchambers/janet-uri.git")
 
 (declare-source
-  :name "uri"
   :source ["uri.janet"])
 
 (declare-native
