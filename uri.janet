@@ -111,7 +111,7 @@
   :scheme (sequence :a (any (choice :a :d "+" "-" ".")))
   :authority (sequence (opt (sequence ,(named-capture :userinfo) "@")) ,(named-capture :host) (opt (sequence ":" ,(named-capture :port))))
   :userinfo (any (choice :unreserved :pct-encoded :sub-delims ":"))
-  :host (choice :IP-literal :IPv4address :reg-name) # TODO ip literals
+  :host (choice :IP-literal :IPv4address :reg-name)
   :port (any :d)
   :IP-literal (sequence "[" (choice :IPv6address :IPvFuture  ) "]" )
   :IPv4address (sequence :dec-octet "." :dec-octet "." :dec-octet "." :dec-octet)
