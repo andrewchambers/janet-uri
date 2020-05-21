@@ -1,10 +1,14 @@
-#if !defined(__FreeBSD__)
-#include <alloca.h>
-#endif
 #include <janet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if !defined(JANET_BSD) && !defined(JANET_WINDOWS)
+#include <alloca.h>
+#endif
+#ifdef JANET_WINDOWS
+#include "malloc.h"
+#define alloca _alloca
+#endif
 
 static int decode_nibble(uint8_t b) {
   if (b >= '0' && b <= '9')
